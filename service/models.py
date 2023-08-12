@@ -185,3 +185,14 @@ class Outstanding(models.Model):
     Payment_mode=models.CharField(max_length=100,null=True,blank=True)
     POD_Received = models.CharField(max_length=50, null=True, blank=True)
 
+
+class OutstandingRecord(models.Model):
+    SR_No= models.PositiveIntegerField()
+    Party_Name=models.CharField(max_length=50)
+    Bill_No = models.CharField(max_length=50)
+    Date = models.DateField()
+    Freight_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    Less_TDS = models.DecimalField(max_digits=20, decimal_places=2)
+    Total_Bill_Amount = models.DecimalField(max_digits=20, decimal_places=2)
+    Bill_sub_on = models.DateField()
+    

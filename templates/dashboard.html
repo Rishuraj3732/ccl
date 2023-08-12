@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,7 +12,7 @@
     }
     .button {
     display: inline-block;
-    background-color: #f3f6f4;
+    background-color: #1877F2;
     color: #fff;
     padding: 10px 20px;
     border-radius: 4px;
@@ -19,7 +20,7 @@
   }
   
   .header {
-    background-color: #674ea7;
+    background-color: #1877F2;
     color: #fff;
     padding: 20px;
     display: flex;
@@ -69,7 +70,7 @@
     .select-btn {
       margin-top: 10px; /* Adds some space between the content and select button */
       padding: 5px 10px;
-      background-color: #8e7cc3;
+      background-color:#1E90FF;
       color: #fff;
       border: none;
       border-radius: 4px;
@@ -79,7 +80,7 @@
 </head>
 <body>
   <div class="header">
-    <img src="static/edit.png" alt="Edit" height="100px" width="100px"/>
+    <img src="{%static 'edit.png'%}" alt="my" height="100px" width="100px"/>
     <h1>Charu Cargo And Logistics </h1>
     
   </div>
@@ -123,14 +124,15 @@
   <div class="container1">
     <div class="card">
       <h3>Bill Register</h3>
-    <!---  <a href="http://127.0.0.1:8000/admin/service/bill_reg/" class="select-btn">View</a>
-      <a href="{% url 'export2' %}" class="select-btn">Export</a>-->
+     <a href="http://127.0.0.1:8000/admin/service/bill_reg/" class="select-btn">View</a>
+      <a href="{% url 'export2' %}" class="select-btn">Export</a>
     </div>
   </div>
   <div class="container1">
     <div class="card">
       <h3>Upload file</h3>
       <a href="{% url 'upload_excel' %}" class="select-btn">Upload file</a>
+      <a href="{% url 'master' %}" class="select-btn">Summary</a>
     </div>
   </div>
 </div>

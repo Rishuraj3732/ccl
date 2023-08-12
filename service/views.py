@@ -9,9 +9,9 @@ import pandas as pd
 from django.contrib import messages
 import numpy as np
 from django.db.models import Q
+from django.db.models import Sum
 
-
-
+from datetime import datetime
 def login(request):
     return render(request,"dashboard.html")
 def outstanding(request):
@@ -59,8 +59,8 @@ def render_to_pdf(html):
     pdf_content = pdf.getvalue()
     pdf.close()
 
-    return pdf_content
- 
+    return pdf_content 
+from PyPDF2 import *
 def print_bill1(request,LR_NO):
     # Retrieve the bill_regs objects based on your requirements
     outstanding=Outstanding.objects.get(LR_No=LR_NO)
@@ -73,7 +73,7 @@ def print_bill1(request,LR_NO):
         address2=request.POST['address2']
         gst=request.POST['GSTIN/UIN']
         hsn_code=request.POST['hsn_code']
-    tax=float(outstanding.Total_Bill_Amount)*0.025
+        tax=outstanding.Total_Bill_Amount
     bill_reg=Bill_Reg(Bill_No=bill_no,Date=date,Party_Name=party_name,GSTIN_No=gst,Freight_Amount=outstanding.Freight_amount,
                       Total_Bill_Amount=outstanding.Total_Bill_Amount)
     bill_reg.save()
@@ -95,13 +95,37 @@ def print_bill1(request,LR_NO):
 
     # Generate the PDF using xhtml2pdf
     pdf = render_to_pdf(rendered_html)
+    annexure_response = print_annexure(request)
+    annexure_pdf = annexure_response.content
+    # Create an HTTP response with the PDF
+    combined_pdf = PdfWriter()
+    main_bill_pdf_reader = PdfReader(BytesIO(pdf))
+    annexure_pdf_reader = PdfReader(BytesIO(annexure_pdf))
+    for page_num in range(len(main_bill_pdf_reader.pages)):
+        combined_pdf.add_page(main_bill_pdf_reader.pages[page_num])
+    for page_num in range(len(annexure_pdf_reader.pages)):
+        combined_pdf.add_page(annexure_pdf_reader.pages[page_num])
+
+        # Create an HTTP response with the combined PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="bill_with_annexure.pdf"'
+
+    combined_pdf.write(response)
+    return response
+    
+def print_annexure(request):
+    context={}
+    rendered_html = render_to_string('annexure.html',context)
+
+    # Generate the PDF using xhtml2pdf
+    pdf = render_to_pdf(rendered_html)
 
     # Create an HTTP response with the PDF
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="bill.pdf"'
+    response['Content-Disposition'] = 'attachment; filename="annexure.pdf"'
     response.write(pdf)
 
-    return response
+    return response    
 def upload_excel(request):
     if request.method == 'POST' and request.FILES['file']:
         excel_file = request.FILES['file']
@@ -421,6 +445,20 @@ from django.contrib.auth import authenticate, login
 
 
 def login_view(request):
+    booking=Vehicle_Booking_Statement.objects.all()
+    total_grand_booking = booking.aggregate(Sum('Grand_Total_Booking'))['Grand_Total_Booking__sum']
+    current_month = datetime.now().month
+    bookings = Vehicle_Booking_Statement.objects.filter(month=current_month)
+    total_grand_bookings = bookings.aggregate(Sum('Grand_Total_Booking'))['Grand_Total_Booking__sum']
+    # Create a context dictionary to pass variables to the template
+    outstanding=OutstandingRecord.objects.all()
+    outstanding_sum=outstanding.aggregate(Sum('Total_Bill_Amount'))['Total_Bill_Amount__sum']
+    context = {
+        'booking': booking,
+        'total_grand_booking': total_grand_booking,
+        'total_grand_bookings': total_grand_bookings,
+        'outstanding_sum':outstanding_sum,
+    }
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -430,7 +468,7 @@ def login_view(request):
 
         if (username=="rishu" and password=="1234"):
             # User credentials are valid
-            return render(request,"dashboard.html")  # Replace 'home' with the URL name of your home page
+            return render(request,"master.html",context)  # Replace 'home' with the URL name of your home page
         else:
             # User credentials are invalid
             error_message = 'Invalid username or password.'
@@ -545,3 +583,73 @@ def calculate_total_amount(request):
 
 
       # Redirect back to the search page if the form was not submitted
+
+def master(request):
+    booking=Vehicle_Booking_Statement.objects.all()
+    total_grand_booking = booking.aggregate(Sum('Grand_Total_Booking'))['Grand_Total_Booking__sum']
+    current_month = datetime.now().month
+    bookings = Vehicle_Booking_Statement.objects.filter(month=current_month)
+    total_grand_bookings = bookings.aggregate(Sum('Grand_Total_Booking'))['Grand_Total_Booking__sum']
+    # Create a context dictionary to pass variables to the template
+    outstanding=OutstandingRecord.objects.all()
+    outstanding_sum=outstanding.aggregate(Sum('Total_Bill_Amount'))['Total_Bill_Amount__sum']
+    context = {
+        'booking': booking,
+        'total_grand_booking': total_grand_booking,
+        'total_grand_bookings': total_grand_bookings,
+        'outstanding_sum':outstanding_sum,
+    }
+    return render(request,"master.html",context)
+
+def get_top_consignors(request):
+    # Retrieve the top 5 consignors and their total booking values
+    top_consignors = Vehicle_Booking_Statement.objects.values('Consignor').annotate(total_booking=Sum('Grand_Total_Booking')).order_by('-total_booking')[:5]
+
+    consignor_labels = [entry['Consignor'] for entry in top_consignors]
+    booking_values = [entry['total_booking'] for entry in top_consignors]
+
+    response_data = {
+        'topConsignors': consignor_labels,
+        'topBookingValues': booking_values,
+    }
+
+    return JsonResponse(response_data)
+def area_data(request):
+    # Step 1: Query the database to get the required data
+    bookings = Vehicle_Booking_Statement.objects.all()
+
+    # Step 2: Calculate the total sum of Grand_Total_Booking and Total_Vehicle_Freight month-wise
+    total_booking_monthwise = {}
+    total_vehicle_freight_monthwise = {}
+
+    for booking in bookings:
+        if booking.month not in total_booking_monthwise:
+            total_booking_monthwise[booking.month] = 0
+        if booking.month not in total_vehicle_freight_monthwise:
+            total_vehicle_freight_monthwise[booking.month] = 0
+
+        if booking.Grand_Total_Booking:
+            total_booking_monthwise[booking.month] += float(booking.Grand_Total_Booking)
+
+        if booking.Total_Vehicle_Freight:
+            total_vehicle_freight_monthwise[booking.month] += float(booking.Total_Vehicle_Freight)
+
+    # Step 3: Construct the response dictionary
+    response = {
+        'total_booking_sum_monthwise': total_booking_monthwise,
+        'total_vehicle_freight_sum_monthwise': total_vehicle_freight_monthwise,
+        # Add any other data you want to include in the response here
+    }
+
+    return JsonResponse(response)
+
+
+
+
+
+    
+def test1(request):
+    return render(request,"test1.html")    
+
+def seq(request):
+    return render(request,"dashboard.html")

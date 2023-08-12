@@ -45,8 +45,11 @@ urlpatterns = [
     path('export2/',export2,name='export2'),
     path('see_values_No/<int:booking_id>/',see_values_No, name='see_values_No'),
     path('calculate_total_amount/',calculate_total_amount,name='calculate_total_amount'),
-
-    
+    path('master',master,name='master'),
+    path('get_top_consignors/',get_top_consignors,name='get_top_consignors'),
+    path('test1/',test1,name='test1'),
+    path('area_data/',area_data,name='area_data'),
+    path('seq/',seq,name='seq')
 
      
 

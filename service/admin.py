@@ -116,5 +116,17 @@ class outstandingAdmin(admin.ModelAdmin):
     list_display=['LR_No','Party_Name','Bill_No','Date','Freight_amount','Total_Bill_Amount','Bill_SubOn','Days',
                   'Received_amount','Received_on_dt','Payment_mode','POD_Received']
 
+from .models import OutstandingRecord
+class outstandingRecordAdmin(admin.ModelAdmin):
+    class Media:
+        css = {
+            'all': ('css/admin_custom.css',)
+        }
+    list_display=['SR_No','Party_Name','Bill_No','Date','Freight_amount','Less_TDS',
+                  'Total_Bill_Amount','Bill_sub_on',]
+    list_filter=['Party_Name']
+
+admin.site.register(OutstandingRecord,outstandingRecordAdmin)
 admin.site.register(Outstanding,outstandingAdmin)
+
 
